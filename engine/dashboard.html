@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClawTrace Dashboard</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #0f172a;
+            color: white;
+            padding: 1rem;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        h1 {
+            font-size: 2rem;
+            color: #f97316;
+        }
+        .device-badge {
+            background-color: #1e293b;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background-color: #1e293b;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+        }
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+        .stat-value {
+            font-size: 1.875rem;
+            font-weight: bold;
+            color: #f97316;
+        }
+        .chart-container {
+            background-color: #1e293b;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid #334155;
+        }
+        .chart-title {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .table-container {
+            background-color: #1e293b;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+            overflow-x: auto;
+        }
+        .table-title {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #334155;
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #334155;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        .mono {
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        .waiting {
+            text-align: center;
+            padding: 3rem;
+            color: #94a3b8;
+            font-size: 1.125rem;
+        }
+        .alerts-section {
+            background-color: #1e293b;
+            border: 2px solid #dc2626;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .alerts-title {
+            font-size: 1.25rem;
+            color: #dc2626;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .alert-badge-count {
+            background: #dc2626;
+            color: white;
+            border-radius: 9999px;
+            padding: 0.125rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .alert-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+        .alert-item:last-child {
+            border-bottom: none;
+        }
+        .alert-badge {
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            color: white;
+        }
+        .alert-badge.critical {
+            background: #dc2626;
+        }
+        .alert-badge.warning {
+            background: #f97316;
+        }
+        .alert-dismiss {
+            background: transparent;
+            border: 1px solid #475569;
+            color: #94a3b8;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+        .alert-dismiss:hover {
+            border-color: #94a3b8;
+            color: white;
+        }
+        footer {
+            text-align: center;
+            padding: 2rem 0 1rem;
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .tables-grid {
+                grid-template-columns: 1fr;
+            }
+            .stat-value {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" x-data="dashboard()">
+        <header>
+            <h1>ClawTrace</h1>
+            <div class="device-badge" x-text="deviceId || 'Loading...'"></div>
+        </header>
+
+        <div x-show="!loading && stats.total_requests === 0" class="waiting">
+            Waiting for data...
+        </div>
+
+        <div x-show="!loading && stats.total_requests > 0">
+            <!-- Active Alerts -->
+            <div class="alerts-section" x-show="alerts.length > 0">
+                <div class="alerts-title">
+                    Alerts <span class="alert-badge-count" x-text="alerts.length"></span>
+                </div>
+                <template x-for="alert in alerts" :key="alert.id">
+                    <div class="alert-item">
+                        <div style="display: flex; gap: 0.75rem; align-items: flex-start; flex: 1;">
+                            <span class="alert-badge" :class="alert.severity" x-text="alert.severity === 'critical' ? 'CRIT' : 'WARN'"></span>
+                            <div>
+                                <div x-text="alert.message" style="font-size: 0.9rem;"></div>
+                                <div style="color: #64748b; font-size: 0.75rem; margin-top: 0.25rem;" x-text="formatTime(alert.created_at)"></div>
+                            </div>
+                        </div>
+                        <button class="alert-dismiss" @click="dismissAlert(alert.id)">Dismiss</button>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Requests</div>
+                    <div class="stat-value" x-text="stats.total_requests.toLocaleString()"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Cost</div>
+                    <div class="stat-value" x-text="'$' + stats.total_cost_usd.toFixed(2)"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg Cost/Request</div>
+                    <div class="stat-value" x-text="'$' + stats.avg_cost_per_request.toFixed(4)"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Top Model</div>
+                    <div class="stat-value" style="font-size: 1rem;" x-text="stats.top_model || 'N/A'"></div>
+                </div>
+            </div>
+
+            <!-- Cost Chart -->
+            <div class="chart-container">
+                <div class="chart-title">Daily Cost Trend (Last <span x-text="stats.days"></span> Days)</div>
+                <canvas id="costChart" width="400" height="100"></canvas>
+            </div>
+
+            <!-- Model and Project Tables -->
+            <div class="tables-grid">
+                <div class="table-container">
+                    <div class="table-title">Model Breakdown</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Requests</th>
+                                <th>Cost</th>
+                                <th>Tokens</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="model in stats.models" :key="model.model">
+                                <tr>
+                                    <td class="mono" x-text="model.model"></td>
+                                    <td x-text="model.count.toLocaleString()"></td>
+                                    <td x-text="'$' + model.cost_usd.toFixed(2)"></td>
+                                    <td x-text="model.tokens.toLocaleString()"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-title">Project Breakdown</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Requests</th>
+                                <th>Cost</th>
+                                <th>Sessions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="project in stats.projects" :key="project.project">
+                                <tr>
+                                    <td x-text="project.project"></td>
+                                    <td x-text="project.count.toLocaleString()"></td>
+                                    <td x-text="'$' + project.cost_usd.toFixed(2)"></td>
+                                    <td x-text="project.sessions"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tool Breakdown -->
+            <div class="table-container" x-show="stats.tools && stats.tools.length > 0">
+                <div class="table-title">Tool Cost Breakdown</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tool</th>
+                            <th>Calls</th>
+                            <th>Cost</th>
+                            <th>Avg/Call</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="tool in stats.tools.slice(0, 15)" :key="tool.tool">
+                            <tr>
+                                <td class="mono" x-text="tool.tool"></td>
+                                <td x-text="tool.count.toLocaleString()"></td>
+                                <td x-text="'$' + tool.cost_usd.toFixed(2)"></td>
+                                <td x-text="'$' + (tool.cost_usd / tool.count).toFixed(4)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pricing Config -->
+            <div class="table-container" x-data="pricingConfig()" style="margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div class="table-title" style="cursor: pointer;" @click="expanded = !expanded">
+                        Pricing Config <span x-text="expanded ? '▾' : '▸'" style="font-size: 0.8rem;"></span>
+                    </div>
+                    <button x-show="expanded" @click="recalculate()" class="alert-dismiss"
+                            :disabled="recalculating"
+                            x-text="recalculating ? 'Recalculating...' : 'Recalculate All Costs'">
+                    </button>
+                </div>
+                <div x-show="expanded">
+                    <div x-show="recalcResult" style="color: #22c55e; font-size: 0.85rem; margin-bottom: 0.75rem;"
+                         x-text="recalcResult"></div>
+                    <!-- Model pricing table -->
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Provider</th>
+                                <th>Events</th>
+                                <th>Input $/M</th>
+                                <th>Output $/M</th>
+                                <th>Cache Read $/M</th>
+                                <th>Cache Write $/M</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(m, idx) in pricingModels" :key="m.model + m.provider">
+                                <tr>
+                                    <td class="mono" style="font-size: 0.8rem;" x-text="m.model"></td>
+                                    <td x-text="m.provider || '-'"></td>
+                                    <td x-text="m.count"></td>
+                                    <td>
+                                        <input type="number" step="0.01" min="0"
+                                               style="width: 70px; background: #0f172a; border: 1px solid #475569; color: white; padding: 2px 4px; border-radius: 3px;"
+                                               :value="m.effective_pricing.input"
+                                               @change="updatePrice(m, 'input', $event.target.value)">
+                                    </td>
+                                    <td>
+                                        <input type="number" step="0.01" min="0"
+                                               style="width: 70px; background: #0f172a; border: 1px solid #475569; color: white; padding: 2px 4px; border-radius: 3px;"
+                                               :value="m.effective_pricing.output"
+                                               @change="updatePrice(m, 'output', $event.target.value)">
+                                    </td>
+                                    <td>
+                                        <input type="number" step="0.01" min="0"
+                                               style="width: 70px; background: #0f172a; border: 1px solid #475569; color: white; padding: 2px 4px; border-radius: 3px;"
+                                               :value="m.effective_pricing.cache_read"
+                                               @change="updatePrice(m, 'cache_read', $event.target.value)">
+                                    </td>
+                                    <td>
+                                        <input type="number" step="0.01" min="0"
+                                               style="width: 70px; background: #0f172a; border: 1px solid #475569; color: white; padding: 2px 4px; border-radius: 3px;"
+                                               :value="m.effective_pricing.cache_write"
+                                               @change="updatePrice(m, 'cache_write', $event.target.value)">
+                                    </td>
+                                    <td style="white-space: nowrap;">
+                                        <button class="alert-dismiss" @click="setFree(m)" title="Set all prices to $0">Free</button>
+                                        <button class="alert-dismiss" @click="resetDefault(m)" title="Remove override">Reset</button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <!-- Provider wildcard -->
+                    <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid #334155;">
+                        <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.5rem;">Provider Wildcard Override</div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <input type="text" placeholder="provider (e.g. nvidia)"
+                                   x-model="newProvider"
+                                   style="width: 120px; background: #0f172a; border: 1px solid #475569; color: white; padding: 4px 8px; border-radius: 3px;">
+                            <span style="color: #64748b;">= all $0</span>
+                            <button class="alert-dismiss" @click="addProviderWildcard()">Add Free Provider</button>
+                        </div>
+                        <template x-for="o in overrides.filter(o => o.model === '*')" :key="o.provider">
+                            <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem; font-size: 0.85rem;">
+                                <span class="mono" x-text="'* / ' + o.provider"></span>
+                                <span style="color: #22c55e;">= $0 (all tokens)</span>
+                                <button class="alert-dismiss" @click="deleteOverride('*', o.provider)">Remove</button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Optimization Suggestions -->
+            <div class="table-container" x-show="suggestions.length > 0" style="border-color: #f97316;">
+                <div class="table-title" style="color: #f97316;">Optimization Suggestions</div>
+                <template x-for="(s, i) in suggestions" :key="i">
+                    <div style="padding: 0.75rem; border-bottom: 1px solid #334155; display: flex; gap: 0.75rem; align-items: flex-start;">
+                        <span x-show="s.severity === 'high'" style="background: #dc2626; color: white; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; white-space: nowrap;">HIGH</span>
+                        <span x-show="s.severity === 'medium'" style="background: #f97316; color: white; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; white-space: nowrap;">MED</span>
+                        <span x-show="s.severity === 'low'" style="background: #64748b; color: white; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; white-space: nowrap;">LOW</span>
+                        <div>
+                            <div x-text="s.message" style="font-size: 0.9rem;"></div>
+                            <div x-show="s.estimated_savings" style="color: #22c55e; font-size: 0.8rem; margin-top: 0.25rem;" x-text="s.estimated_savings ? 'Potential savings: $' + s.estimated_savings.toFixed(2) + '/week' : ''"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Recent Sessions -->
+            <div class="table-container">
+                <div class="table-title">Recent Sessions</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Session ID</th>
+                            <th>Project</th>
+                            <th>Requests</th>
+                            <th>Cost</th>
+                            <th>Last Active</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="session in stats.sessions" :key="session.session_id">
+                            <tr>
+                                <td class="mono" x-text="session.session_id.substring(0, 12)"></td>
+                                <td x-text="session.project"></td>
+                                <td x-text="session.requests.toLocaleString()"></td>
+                                <td x-text="'$' + session.cost_usd.toFixed(2)"></td>
+                                <td x-text="formatTime(session.last_active)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer>
+            Powered by ClawTrace — Analytics for OpenClaw
+        </footer>
+    </div>
+
+    <script>
+        // Auth: read device_secret from URL hash, persist in localStorage
+        function getDeviceSecret() {
+            const hash = window.location.hash.slice(1);
+            if (hash && hash.length > 0) {
+                localStorage.setItem('clawtrace_secret', hash);
+                // Clean the hash from URL to avoid leaking in referer
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
+            return localStorage.getItem('clawtrace_secret') || '';
+        }
+
+        function authHeaders() {
+            const secret = getDeviceSecret();
+            const headers = {'Content-Type': 'application/json'};
+            if (secret) {
+                headers['Authorization'] = 'Bearer ' + secret;
+            }
+            return headers;
+        }
+
+        function authFetch(url, options = {}) {
+            const secret = getDeviceSecret();
+            if (!options.headers) options.headers = {};
+            if (secret) {
+                options.headers['Authorization'] = 'Bearer ' + secret;
+            }
+            return fetch(url, options);
+        }
+
+        function pricingConfig() {
+            return {
+                expanded: false,
+                pricingModels: [],
+                overrides: [],
+                recalculating: false,
+                recalcResult: '',
+                newProvider: '',
+
+                init() {
+                    this.$watch('expanded', (val) => { if (val) this.load(); });
+                },
+
+                getDeviceId() {
+                    const match = window.location.pathname.match(/\/d\/([^\/]+)/);
+                    return match ? match[1] : null;
+                },
+
+                async load() {
+                    const id = this.getDeviceId();
+                    if (!id) return;
+                    const [modelsResp, configResp] = await Promise.all([
+                        authFetch(`/api/pricing/${id}/models`),
+                        authFetch(`/api/pricing/${id}/config`)
+                    ]);
+                    if (modelsResp.ok) {
+                        const data = await modelsResp.json();
+                        this.pricingModels = data.models || [];
+                    }
+                    if (configResp.ok) {
+                        const data = await configResp.json();
+                        this.overrides = data.overrides || [];
+                    }
+                },
+
+                async updatePrice(m, field, value) {
+                    const id = this.getDeviceId();
+                    const price = parseFloat(value);
+                    if (isNaN(price) || price < 0) return;
+                    const p = {...m.effective_pricing};
+                    p[field] = price;
+                    await authFetch(`/api/pricing/${id}/config`, {
+                        method: 'POST',
+                        headers: authHeaders(),
+                        body: JSON.stringify({
+                            model: m.model,
+                            provider: m.provider || '',
+                            input_price: p.input,
+                            output_price: p.output,
+                            cache_read_price: p.cache_read,
+                            cache_write_price: p.cache_write,
+                        })
+                    });
+                    await this.load();
+                },
+
+                async setFree(m) {
+                    const id = this.getDeviceId();
+                    await authFetch(`/api/pricing/${id}/config`, {
+                        method: 'POST',
+                        headers: authHeaders(),
+                        body: JSON.stringify({
+                            model: m.model,
+                            provider: m.provider || '',
+                            input_price: 0, output_price: 0,
+                            cache_read_price: 0, cache_write_price: 0,
+                        })
+                    });
+                    await this.load();
+                },
+
+                async resetDefault(m) {
+                    const id = this.getDeviceId();
+                    await authFetch(`/api/pricing/${id}/config`, {
+                        method: 'DELETE',
+                        headers: authHeaders(),
+                        body: JSON.stringify({ model: m.model, provider: m.provider || '' })
+                    });
+                    await this.load();
+                },
+
+                async addProviderWildcard() {
+                    const id = this.getDeviceId();
+                    const prov = this.newProvider.trim();
+                    if (!prov) return;
+                    await authFetch(`/api/pricing/${id}/config`, {
+                        method: 'POST',
+                        headers: authHeaders(),
+                        body: JSON.stringify({
+                            model: '*', provider: prov,
+                            input_price: 0, output_price: 0,
+                            cache_read_price: 0, cache_write_price: 0,
+                        })
+                    });
+                    this.newProvider = '';
+                    await this.load();
+                },
+
+                async deleteOverride(model, provider) {
+                    const id = this.getDeviceId();
+                    await authFetch(`/api/pricing/${id}/config`, {
+                        method: 'DELETE',
+                        headers: authHeaders(),
+                        body: JSON.stringify({ model, provider })
+                    });
+                    await this.load();
+                },
+
+                async recalculate() {
+                    const id = this.getDeviceId();
+                    this.recalculating = true;
+                    this.recalcResult = '';
+                    try {
+                        const resp = await authFetch(`/api/pricing/${id}/recalculate`, {method: 'POST'});
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            this.recalcResult = `Recalculated ${data.events_updated} events.`;
+                        }
+                    } catch (e) {
+                        this.recalcResult = 'Error recalculating.';
+                    }
+                    this.recalculating = false;
+                }
+            }
+        }
+
+        function dashboard() {
+            return {
+                deviceId: null,
+                loading: true,
+                stats: {
+                    total_requests: 0,
+                    total_cost_usd: 0,
+                    avg_cost_per_request: 0,
+                    total_tokens: 0,
+                    top_model: '',
+                    days: 7,
+                    timeseries: [],
+                    models: [],
+                    projects: [],
+                    sessions: [],
+                    tools: []
+                },
+                suggestions: [],
+                alerts: [],
+                alertCount: 0,
+                chart: null,
+
+                init() {
+                    this.extractDeviceId();
+                    this.fetchData();
+                    setInterval(() => this.fetchData(), 30000);
+                },
+
+                extractDeviceId() {
+                    const path = window.location.pathname;
+                    const match = path.match(/\/d\/([^\/]+)/);
+                    this.deviceId = match ? match[1] : null;
+                },
+
+                async fetchData() {
+                    if (!this.deviceId) {
+                        console.error('No device_id found in URL');
+                        this.loading = false;
+                        return;
+                    }
+
+                    try {
+                        const [statsResp, optResp, alertsResp] = await Promise.all([
+                            authFetch(`/api/stats/${this.deviceId}`),
+                            authFetch(`/api/optimize/${this.deviceId}`),
+                            authFetch(`/api/alerts/${this.deviceId}?acknowledged=false`)
+                        ]);
+
+                        if (statsResp.ok) {
+                            this.stats = await statsResp.json();
+                        }
+                        if (optResp.ok) {
+                            const optData = await optResp.json();
+                            this.suggestions = optData.suggestions || [];
+                        }
+                        if (alertsResp.ok) {
+                            const alertData = await alertsResp.json();
+                            this.alerts = alertData.alerts || [];
+                            this.alertCount = alertData.count || 0;
+                        }
+
+                        this.loading = false;
+
+                        if (this.stats.total_requests > 0) {
+                            this.$nextTick(() => this.renderChart());
+                        }
+                    } catch (error) {
+                        console.error('Error fetching data:', error);
+                        this.loading = false;
+                    }
+                },
+
+                renderChart() {
+                    const ctx = document.getElementById('costChart');
+                    if (!ctx) return;
+
+                    if (this.chart) {
+                        this.chart.destroy();
+                    }
+
+                    this.chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: this.stats.timeseries.map(d => d.date),
+                            datasets: [{
+                                label: 'Daily Cost ($)',
+                                data: this.stats.timeseries.map(d => d.cost_usd),
+                                borderColor: '#f97316',
+                                backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                                tension: 0.3,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        color: '#94a3b8',
+                                        callback: function(value) {
+                                            return '$' + value.toFixed(2);
+                                        }
+                                    },
+                                    grid: {
+                                        color: '#334155'
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        color: '#94a3b8'
+                                    },
+                                    grid: {
+                                        color: '#334155'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                },
+
+                formatTime(timestamp) {
+                    const date = new Date(timestamp);
+                    const now = new Date();
+                    const diff = now - date;
+                    const hours = Math.floor(diff / (1000 * 60 * 60));
+                    const minutes = Math.floor(diff / (1000 * 60));
+
+                    if (minutes < 60) {
+                        return `${minutes}m ago`;
+                    } else if (hours < 24) {
+                        return `${hours}h ago`;
+                    } else {
+                        return date.toLocaleDateString();
+                    }
+                },
+
+                async dismissAlert(alertId) {
+                    try {
+                        const resp = await authFetch(`/api/alerts/${this.deviceId}/acknowledge/${alertId}`, {
+                            method: 'POST'
+                        });
+                        if (resp.ok) {
+                            this.alerts = this.alerts.filter(a => a.id !== alertId);
+                            this.alertCount = this.alerts.length;
+                        }
+                    } catch (error) {
+                        console.error('Error dismissing alert:', error);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

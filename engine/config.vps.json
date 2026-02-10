@@ -1,0 +1,22 @@
+{
+  "data_paths": [],
+  "db_path": "/root/clawtrace/clawtrace.db",
+  "server_port": 19898,
+  "refresh_interval_seconds": 60,
+  "anomaly_threshold": 0.25,
+  "cache_ttl_seconds": 60,
+  "pricing": {
+    "provider_defaults": {
+      "nvidia": {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0}
+    }
+  },
+  "alerts": {
+    "daily_budget_usd": 10.00,
+    "session_spike_usd": 5.00,
+    "hourly_burn_rate_usd": 3.00,
+    "hourly_request_volume": 200,
+    "hourly_token_volume": 2000000,
+    "session_duration_minutes": 180,
+    "dedup_window_minutes": 60
+  }
+}
