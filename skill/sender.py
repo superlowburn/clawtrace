@@ -213,7 +213,7 @@ def extract_project_name(path: str) -> str:
             # Filter out empty and path-like segments (Users, home, usernames)
             meaningful = [
                 s for s in segments
-                if s and s not in ["Users", "home", "stevemallett", "claude"] and len(s) > 2
+                if s and s not in ["Users", "home", "root", "stevemallett", "claude"] and len(s) > 2
             ]
             if meaningful:
                 return meaningful[-1]
@@ -231,6 +231,62 @@ def extract_project_name(path: str) -> str:
     return "unknown"
 
 
+def _extract_usage(record: dict) -> tuple | None:
+    """Extract usage data from a record, handling both JSONL formats.
+
+    Format 1 (Claude Code): type="assistant", usage keys: input_tokens, output_tokens, etc.
+    Format 2 (OpenClaw):    type="message", message.role="assistant", usage keys: input, output, cacheRead, cacheWrite
+
+    Returns (model, provider, timestamp, input_t, output_t, cache_read_t, cache_write_t, cost_total, tools) or None.
+    """
+    message = record.get("message", {})
+    if not isinstance(message, dict):
+        return None
+
+    usage = message.get("usage")
+    if not usage or not isinstance(usage, dict):
+        return None
+
+    record_type = record.get("type", "")
+    timestamp = record.get("timestamp", "")
+
+    # Format 1: OpenClaw agent format
+    # type: "message", message.role: "assistant", usage keys: input, output, cacheRead, cacheWrite
+    if record_type == "message" and message.get("role") == "assistant":
+        model = message.get("model", "unknown")
+        provider = message.get("provider", "unknown")
+        input_t = usage.get("input", 0)
+        output_t = usage.get("output", 0)
+        cache_read_t = usage.get("cacheRead", 0)
+        cache_write_t = usage.get("cacheWrite", 0)
+
+        # OpenClaw may have pre-computed cost
+        cost_obj = usage.get("cost")
+        if cost_obj and isinstance(cost_obj, dict) and cost_obj.get("total", 0) > 0:
+            cost_total = cost_obj["total"]
+        else:
+            cost_total = compute_cost(model, input_t, output_t, cache_read_t, cache_write_t)
+
+        tools = _extract_tools(message)
+        return (model, provider, timestamp, input_t, output_t, cache_read_t, cache_write_t, cost_total, tools)
+
+    # Format 2: Claude Code format
+    # type: "assistant", usage keys: input_tokens, output_tokens, etc.
+    if record_type == "assistant":
+        model = message.get("model", "unknown")
+        provider = record.get("provider", "anthropic")
+        input_t = usage.get("input_tokens", 0)
+        output_t = usage.get("output_tokens", 0)
+        cache_read_t = usage.get("cache_read_input_tokens", 0)
+        cache_write_t = usage.get("cache_creation_input_tokens", 0)
+
+        cost_total = compute_cost(model, input_t, output_t, cache_read_t, cache_write_t)
+        tools = _extract_tools(message)
+        return (model, provider, timestamp, input_t, output_t, cache_read_t, cache_write_t, cost_total, tools)
+
+    return None
+
+
 def parse_session_file(path: Path) -> list[UsageEvent]:
     """Parse one JSONL file and extract assistant messages with usage."""
     events = []
@@ -239,7 +295,7 @@ def parse_session_file(path: Path) -> list[UsageEvent]:
 
     try:
         with open(path, "r", encoding="utf-8") as f:
-            for line_num, line in enumerate(f, 1):
+            for line in f:
                 line = line.strip()
                 if not line:
                     continue
@@ -248,29 +304,11 @@ def parse_session_file(path: Path) -> list[UsageEvent]:
                 except json.JSONDecodeError:
                     continue
 
-                # Only process assistant messages with usage
-                if record.get("type") != "assistant":
+                result = _extract_usage(record)
+                if result is None:
                     continue
 
-                message = record.get("message", {})
-                if not isinstance(message, dict):
-                    continue
-
-                usage = message.get("usage")
-                if not usage or not isinstance(usage, dict):
-                    continue
-
-                timestamp = record.get("timestamp", "")
-                model = message.get("model", "unknown")
-                provider = record.get("provider", "anthropic")
-
-                input_t = usage.get("input_tokens", 0)
-                output_t = usage.get("output_tokens", 0)
-                cache_read_t = usage.get("cache_read_input_tokens", 0)
-                cache_write_t = usage.get("cache_creation_input_tokens", 0)
-
-                cost_total = compute_cost(model, input_t, output_t, cache_read_t, cache_write_t)
-                tools = _extract_tools(message)
+                model, provider, timestamp, input_t, output_t, cache_read_t, cache_write_t, cost_total, tools = result
 
                 events.append(UsageEvent(
                     timestamp=timestamp,
