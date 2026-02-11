@@ -18,7 +18,7 @@ OpenClaw's creator [explicitly rejected](https://x.com/steipete) built-in teleme
 ## Quick Start
 
 ```bash
-pipx install git+https://github.com/superlowburn/clawtrace.git
+curl -sL clawtrace.vybng.co/install | bash
 clawtrace serve
 ```
 

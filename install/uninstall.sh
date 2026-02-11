@@ -5,6 +5,7 @@
 set -euo pipefail
 
 CLAWTRACE_DIR="$HOME/.clawtrace"
+BIN_DIR="$HOME/.local/bin"
 PLIST_LABEL="co.vybng.clawtrace"
 PLIST_PATH="$HOME/Library/LaunchAgents/${PLIST_LABEL}.plist"
 
@@ -20,7 +21,6 @@ echo ""
 
 # 1. Remove auto-sync
 if [[ "$(uname)" == "Darwin" ]]; then
-    # macOS: launchd
     if [ -f "$PLIST_PATH" ]; then
         launchctl unload "$PLIST_PATH" 2>/dev/null || true
         rm -f "$PLIST_PATH"
@@ -29,7 +29,6 @@ if [[ "$(uname)" == "Darwin" ]]; then
         echo "No launchd agent found"
     fi
 else
-    # Linux: cron
     if crontab -l 2>/dev/null | grep -q '# clawtrace-sync'; then
         (crontab -l 2>/dev/null | grep -v '# clawtrace-sync') | crontab -
         echo "Removed cron job"
@@ -38,16 +37,23 @@ else
     fi
 fi
 
-# 2. Remove sender script
-if [ -f "$CLAWTRACE_DIR/sender.py" ]; then
-    rm -f "$CLAWTRACE_DIR/sender.py"
-    echo "Removed sender.py"
+# 2. Remove CLI wrapper
+if [ -f "$BIN_DIR/clawtrace" ]; then
+    rm -f "$BIN_DIR/clawtrace"
+    echo "Removed clawtrace command"
 fi
 
-# Remove sync log
+# 3. Remove venv
+if [ -d "$CLAWTRACE_DIR/venv" ]; then
+    rm -rf "$CLAWTRACE_DIR/venv"
+    echo "Removed ClawTrace venv"
+fi
+
+# 4. Remove sender and logs
+rm -f "$CLAWTRACE_DIR/sender.py"
 rm -f "$CLAWTRACE_DIR/sync.log"
 
-# 3. Optionally purge all data
+# 5. Optionally purge all data
 if $PURGE; then
     if [ -d "$CLAWTRACE_DIR" ]; then
         rm -rf "$CLAWTRACE_DIR"
