@@ -82,8 +82,8 @@ echo "  clawtrace command available"
 
 # --- Step 5: Quick test ---
 SUMMARY=$(clawtrace status --json 2>/dev/null || echo '{}')
-COST=$(echo "$SUMMARY" | python3 -c "import sys,json; print(f'${json.load(sys.stdin).get(\"total_cost_usd\", 0):.2f}')" 2>/dev/null || echo "0.00")
-SESSIONS=$(echo "$SUMMARY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('session_count', 0))" 2>/dev/null || echo "0")
+COST=$(echo "$SUMMARY" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(f"{d.get(\"total_cost_usd\", 0):.2f}")' 2>/dev/null || echo "0.00")
+SESSIONS=$(echo "$SUMMARY" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("session_count", 0))' 2>/dev/null || echo "0")
 
 echo ""
 echo "  ┌─────────────────────────────────┐"
