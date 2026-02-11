@@ -159,15 +159,27 @@ PLIST
 fi
 
 # --- Done ---
+# Detect port conflict
+PORT=19898
+if command -v lsof &>/dev/null && lsof -i ":$PORT" &>/dev/null; then
+    PORT=19899
+fi
+
 echo ""
 echo "  ╔═══════════════════════════════════╗"
 echo "  ║         Setup complete!            ║"
 echo "  ╚═══════════════════════════════════╝"
 echo ""
 echo "  Start your dashboard:"
-echo "    clawtrace serve"
+if [ "$PORT" != "19898" ]; then
+    echo "    clawtrace serve --port $PORT"
+    echo ""
+    echo "  (Port 19898 is in use, using $PORT instead)"
+else
+    echo "    clawtrace serve"
+fi
 echo ""
-echo "  Then open http://localhost:19898"
+echo "  Then open http://localhost:$PORT"
 echo ""
 echo "  Other commands:"
 echo "    clawtrace status        Quick cost summary"
