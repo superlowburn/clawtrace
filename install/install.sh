@@ -170,16 +170,22 @@ echo "  ╔═══════════════════════
 echo "  ║         Setup complete!            ║"
 echo "  ╚═══════════════════════════════════╝"
 echo ""
-echo "  Start your dashboard:"
+PORT_FLAG=""
 if [ "$PORT" != "19898" ]; then
-    echo "    clawtrace serve --port $PORT"
+    PORT_FLAG=" --port $PORT"
+fi
+
+echo "  Start your dashboard:"
+echo "    ~/.local/bin/clawtrace serve${PORT_FLAG}"
+if [ "$PORT" != "19898" ]; then
     echo ""
     echo "  (Port 19898 is in use, using $PORT instead)"
-else
-    echo "    clawtrace serve"
 fi
 echo ""
 echo "  Then open http://localhost:$PORT"
+echo ""
+echo "  After restarting your shell, you can just use:"
+echo "    clawtrace serve${PORT_FLAG}"
 echo ""
 echo "  Other commands:"
 echo "    clawtrace status        Quick cost summary"
