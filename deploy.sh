@@ -39,6 +39,7 @@ if $SYNC; then
         --exclude 'node_modules/' \
         --exclude '.wrangler/' \
         --exclude 'tasks/' \
+        --exclude 'engine/config.json' \
         "$LOCAL_DIR/" "$VPS:$VPS_DIR/"
     echo "--- Files synced ---"
 fi
