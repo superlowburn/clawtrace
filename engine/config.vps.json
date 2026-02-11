@@ -1,4 +1,5 @@
 {
+  "hosted": true,
   "data_paths": [],
   "db_path": "/root/clawtrace/clawtrace.db",
   "server_port": 19898,
