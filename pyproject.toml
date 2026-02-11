@@ -17,5 +17,8 @@ clawtrace = "engine.cli:main"
 [tool.setuptools.packages.find]
 include = ["engine*"]
 
+[tool.setuptools.package-data]
+engine = ["*.html", "*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["engine/tests"]

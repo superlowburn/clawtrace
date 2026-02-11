@@ -275,8 +275,9 @@
         <div class="container">
             <h1>ClawTrace</h1>
             <p class="subtitle">See what your OpenClaw agent is really costing you</p>
-            <div class="install-command">openclaw add clawtrace</div>
-            <a href="#install" class="cta-button">Get Started</a>
+            <div class="install-command" onclick="navigator.clipboard.writeText('pip install git+https://github.com/superlowburn/clawtrace.git').then(function(){var el=document.querySelector('.install-command');el.dataset.orig=el.textContent;el.textContent='Copied!';setTimeout(function(){el.textContent=el.dataset.orig},2000)})" style="cursor:pointer" title="Click to copy">pip install git+https://github.com/superlowburn/clawtrace.git</div>
+            <p style="color:#94a3b8;margin-top:12px;font-size:0.95rem">Then run <code style="color:#f97316">clawtrace serve</code> and open <a href="http://localhost:19898" style="color:#f97316">localhost:19898</a></p>
+            <a href="#install" class="cta-button" style="margin-top:24px">Get Started</a>
         </div>
     </section>
 
@@ -312,22 +313,22 @@
                 <div class="step">
                     <div class="step-number">1</div>
                     <div class="step-content">
-                        <h3>Install the skill</h3>
-                        <p>One command to add ClawTrace to your OpenClaw setup</p>
+                        <h3>Install</h3>
+                        <p><code style="color:#f97316">pip install git+https://github.com/superlowburn/clawtrace.git</code></p>
                     </div>
                 </div>
                 <div class="step">
                     <div class="step-number">2</div>
                     <div class="step-content">
-                        <h3>Use your agent normally</h3>
-                        <p>Data flows automatically as your agent works</p>
+                        <h3>Launch your dashboard</h3>
+                        <p><code style="color:#f97316">clawtrace serve</code> — opens a local dashboard at <a href="http://localhost:19898" style="color:#f97316">localhost:19898</a></p>
                     </div>
                 </div>
                 <div class="step">
                     <div class="step-number">3</div>
                     <div class="step-content">
-                        <h3>Open your dashboard</h3>
-                        <p>Instant insights into your usage and costs</p>
+                        <h3>Want multi-device sync?</h3>
+                        <p>Run <code style="color:#f97316">curl -sL clawtrace.vybng.co/install | bash</code> to auto-sync to your hosted dashboard</p>
                     </div>
                 </div>
             </div>
@@ -339,28 +340,29 @@
         <div class="container">
             <h2 class="section-title">Pricing</h2>
             <div class="pricing-grid">
-                <div class="pricing-card">
-                    <h3>Free</h3>
-                    <div class="price">$0</div>
-                    <div class="price-period">forever</div>
+                <div class="pricing-card featured">
+                    <h3>Early Access</h3>
+                    <div class="price">Free</div>
+                    <div class="price-period">during early access</div>
                     <ul>
                         <li>Personal dashboard</li>
-                        <li>30-day history</li>
-                        <li>Unlimited events</li>
+                        <li>All projects tracked</li>
+                        <li>Cost alerts</li>
+                        <li>7-day history</li>
                     </ul>
-                    <a href="#" class="cta-button">Get Started</a>
+                    <a href="#" class="cta-button" onclick="navigator.clipboard.writeText('pip install git+https://github.com/superlowburn/clawtrace.git');this.textContent='Copied!';setTimeout(()=>this.textContent='Get Started',2000);return false">Get Started</a>
                 </div>
-                <div class="pricing-card featured">
+                <div class="pricing-card" style="opacity:0.6">
                     <h3>Pro</h3>
-                    <div class="price">$19</div>
-                    <div class="price-period">per month</div>
+                    <div class="price">$79</div>
+                    <div class="price-period">one-time</div>
                     <ul>
                         <li>Everything in Free</li>
                         <li>Cross-user benchmarks</li>
-                        <li>365-day history</li>
-                        <li>Cost alerts</li>
+                        <li>90-day history</li>
+                        <li>Priority support</li>
                     </ul>
-                    <a href="#" class="cta-button">Go Pro</a>
+                    <span class="cta-button" style="background:#475569;cursor:default">Coming Soon</span>
                 </div>
             </div>
         </div>
@@ -369,7 +371,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <p>Built by <a href="https://twitter.com/comforteagle">@comforteagle</a> · ClawTrace is open source</p>
+            <p>Built by <a href="https://twitter.com/comforteagle">@comforteagle</a> · <a href="https://github.com/superlowburn/clawtrace">Open source on GitHub</a></p>
         </div>
     </footer>
 </body>

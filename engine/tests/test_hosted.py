@@ -15,6 +15,7 @@ def hosted_app(tmp_path):
         "cache_ttl_seconds": 9999,
         "server_port": 19898,
         "db_path": db_path,
+        "hosted": True,
     }
     app = create_app(config)
     app.config["TESTING"] = True
@@ -279,15 +280,14 @@ class TestStatsEndpoint:
 
     def test_stats_after_ingest(self, hosted_client, registered_device):
         device_id, _, headers = registered_device
-        # Ingest only single-project events (free tier = 1 project)
-        single_project_events = [e for e in SAMPLE_EVENTS if e["project"] == "threadjack"]
+        # Early access: ingest all events (no project limit)
         hosted_client.post("/api/ingest",
-            json={"device_id": device_id, "events": single_project_events},
+            json={"device_id": device_id, "events": SAMPLE_EVENTS},
             headers=headers)
         resp = hosted_client.get(f"/api/stats/{device_id}", headers=headers)
         assert resp.status_code == 200
         data = resp.get_json()
-        assert data["total_requests"] == 2
+        assert data["total_requests"] == 3
         assert data["total_cost_usd"] > 0
 
     def test_stats_invalid_device_id(self, hosted_client):
@@ -347,38 +347,37 @@ class TestDeviceDashboard:
 # --- Tier Enforcement ---
 
 class TestTierEnforcement:
-    def test_free_tier_limits_to_one_project(self, hosted_client, registered_device):
-        """Free tier only ingests events from the first project."""
+    def test_free_tier_allows_all_projects(self, hosted_client, registered_device):
+        """Early access: free tier allows all projects."""
         device_id, _, headers = registered_device
         # First ingest: establishes "threadjack" as the first project
         hosted_client.post("/api/ingest",
             json={"device_id": device_id, "events": SAMPLE_EVENTS[:1]},
             headers=headers)
-        # Second ingest: mixed projects — only threadjack events should be ingested
+        # Second ingest: mixed projects — all events should be ingested
         resp = hosted_client.post("/api/ingest",
             json={"device_id": device_id, "events": SAMPLE_EVENTS},
             headers=headers)
         assert resp.status_code == 200
         data = resp.get_json()
-        # Only threadjack events (2 of 3) should be ingested
-        assert data["ingested"] == 2
+        # All 3 events ingested (early access: no project limit)
+        assert data["ingested"] == 3
 
-    def test_free_tier_rejects_new_project_only(self, hosted_client, registered_device):
-        """Free tier rejects batch with only a new project."""
+    def test_free_tier_accepts_new_project(self, hosted_client, registered_device):
+        """Early access: free tier accepts events from any project."""
         device_id, _, headers = registered_device
         # Establish first project
         hosted_client.post("/api/ingest",
             json={"device_id": device_id, "events": SAMPLE_EVENTS[:1]},
             headers=headers)
-        # Send events for a different project only
+        # Send events for a different project — should succeed
         new_project_events = [{"event_type": "llm.usage", "timestamp": "2026-02-09T16:00:00Z",
                                "project": "new-project", "model": "claude-opus-4-6",
                                "input_tokens": 100, "output_tokens": 50}]
         resp = hosted_client.post("/api/ingest",
             json={"device_id": device_id, "events": new_project_events},
             headers=headers)
-        assert resp.status_code == 403
-        assert "Free tier" in resp.get_json()["error"]
+        assert resp.status_code == 200
 
     def test_free_tier_clamps_history(self, hosted_client, registered_device):
         """Free tier clamps stats to 7 days max."""
@@ -387,14 +386,14 @@ class TestTierEnforcement:
         assert resp.status_code == 200
         assert resp.get_json()["days"] == 7
 
-    def test_free_tier_alerts_empty(self, hosted_client, registered_device):
-        """Free tier returns empty alerts."""
+    def test_free_tier_gets_alerts(self, hosted_client, registered_device):
+        """Early access: free tier gets real alerts response."""
         device_id, _, headers = registered_device
         resp = hosted_client.get(f"/api/alerts/{device_id}", headers=headers)
         assert resp.status_code == 200
         data = resp.get_json()
-        assert data["alerts"] == []
-        assert data.get("tier_limited") is True
+        assert "alerts" in data
+        assert "tier_limited" not in data
 
     def test_pro_tier_full_access(self, hosted_app, hosted_client):
         """Pro tier gets full access."""

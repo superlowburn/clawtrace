@@ -159,6 +159,83 @@ cd app/ClawTrace && swift build
 | `web/wrangler.toml` | Cloudflare deployment |
 | `deploy.sh` | VPS deployment script |
 
+## Business Strategy
+
+### Model: Open Core
+
+Give away the local dashboard as a free wedge. Sell hosted multi-device sync + team features.
+
+**The funnel:**
+1. User discovers ClawTrace (GitHub, ClawHub, word of mouth)
+2. `pip install clawtrace && clawtrace serve` — instant local dashboard
+3. User gets hooked on per-skill cost visibility
+4. User wants: dashboards across devices, team analytics, 90-day retention
+5. User upgrades to Pro ($79) or Team ($199)
+
+### Open Source (MIT) — github.com/superlowburn/clawtrace
+
+Everything a user runs locally:
+
+| File | What it does |
+|------|-------------|
+| `engine/parser.py` | JSONL session log parser (dual-format) |
+| `engine/aggregator.py` | Cost/usage computation |
+| `engine/anomaly.py` | Spike detection |
+| `engine/pricing.py` | Model pricing lookup |
+| `engine/cli.py` | Local CLI (status, cost-report, anomalies, serve) |
+| `engine/server.py` | Flask API (local mode — localhost:19898) |
+| `engine/dashboard.html` | The dashboard (the free wedge) |
+| `engine/config.json` | Config schema |
+| `skill/sender.py` | Opt-in data sync to hosted backend |
+
+48 tests. Zero cloud dependency for core functionality.
+
+### Proprietary — this repo (private)
+
+The hosted backend (the paid product):
+
+| File | What it does |
+|------|-------------|
+| `engine/db.py` | Multi-tenant SQLite with device auth, tier enforcement |
+| `engine/server.py` (hosted extensions) | `/api/register`, `/api/claim`, `/api/ingest`, `/api/stats/<device_id>`, pricing CRUD, alerts |
+| Auth layer | Device ID + secret hashing |
+| Tier enforcement | Free: 1 project/7 days. Pro: unlimited/90 days. Team: 3 devices |
+| Alert persistence | Server-side alert config + checking |
+| VPS infrastructure | nginx, SSL, systemd, deploy.sh |
+
+### Pricing
+
+| Tier | Price | Projects | Retention | Devices |
+|------|-------|----------|-----------|---------|
+| Free | $0 | 1 | 7 days | 1 |
+| Pro | $79 (one-time) | Unlimited | 90 days | 1 |
+| Team | $199 (one-time) | Unlimited | 90 days | 3 |
+
+Payment processing: not yet implemented (Stripe/Lemon Squeezy). Early access: all users get Pro-level features.
+
+### Why Open Source Works Here
+
+1. **Trust**: steipete rejected telemetry. Open source proves we're not secretly exfiltrating data
+2. **Adoption**: low friction — `pip install` and go. Community can verify, fork, contribute
+3. **Lock-in to hosted**: the dashboard is free and addictive. Multi-device sync is the pain point that unlocks payment
+4. **Moat**: the proprietary value is in multi-tenant storage, device auth, tier enforcement — things users don't want to self-host
+
+### Distribution Channels (TODO)
+
+- [ ] ClawHub skill listing
+- [ ] Homebrew formula for menu bar app
+- [ ] PyPI publish
+- [ ] OpenClaw community post/announcement
+- [ ] Reply to @jlevitsk DM with link
+
+### Key Metrics to Track
+
+- GitHub stars / forks
+- `pip install` count (once on PyPI)
+- Device registrations (hosted)
+- Free → Pro conversion rate
+- Active devices (daily sync)
+
 ## Steve's Context
 
 Steve is a solo developer building in the OpenClaw ecosystem. He's not a big company — he's one person using AI agents to build and ship products. ClawTrace should be simple, focused, and shippable fast. Don't over-engineer. The local-first angle is the moat — users keep their data, no cloud required for core functionality. The hosted tier is for people who want dashboards across devices or team visibility.

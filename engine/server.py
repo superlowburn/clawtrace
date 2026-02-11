@@ -126,13 +126,19 @@ def create_app(config: dict | None = None) -> Flask:
             "dashboard_url": f"/d/{device_id}#{device_secret}",
         })
 
-    # --- Landing page ---
+    # --- Root page: dashboard (local) or landing page (hosted) ---
     @app.route("/")
-    def landing():
-        html_path = os.path.join(os.path.dirname(__file__), "landing.html")
-        if os.path.exists(html_path):
-            return send_file(html_path)
-        return "<h1>ClawTrace</h1><p>Analytics for OpenClaw</p>", 200
+    def root():
+        if config.get("hosted"):
+            html_path = os.path.join(os.path.dirname(__file__), "landing.html")
+            if os.path.exists(html_path):
+                return send_file(html_path)
+            return "<h1>ClawTrace</h1><p>Analytics for OpenClaw</p>", 200
+        else:
+            html_path = os.path.join(os.path.dirname(__file__), "dashboard.html")
+            if os.path.exists(html_path):
+                return send_file(html_path)
+            return "<h1>ClawTrace Dashboard</h1>", 200
 
     # --- Per-device dashboard ---
     @app.route("/d/<device_id>")
@@ -167,18 +173,18 @@ def create_app(config: dict | None = None) -> Flask:
         if len(events) > 500:
             return jsonify({"error": "Max 500 events per batch"}), 400
 
-        # Tier enforcement: free tier = 1 project only
-        tier = _get_device_tier(device_id)
-        if tier == "free":
-            first_project = db.get_device_first_project(device_id, db_path)
-            if first_project:
-                events = [e for e in events if e.get("project") == first_project]
-                if not events:
-                    return jsonify({
-                        "error": "Free tier limited to 1 project",
-                        "allowed_project": first_project,
-                        "upgrade_url": "https://clawtrace.vybng.co/#pricing",
-                    }), 403
+        # Early access: all projects allowed. Re-enable when payment is live.
+        # tier = _get_device_tier(device_id)
+        # if tier == "free":
+        #     first_project = db.get_device_first_project(device_id, db_path)
+        #     if first_project:
+        #         events = [e for e in events if e.get("project") == first_project]
+        #         if not events:
+        #             return jsonify({
+        #                 "error": "Free tier limited to 1 project",
+        #                 "allowed_project": first_project,
+        #                 "upgrade_url": "https://clawtrace.vybng.co/#pricing",
+        #             }), 403
 
         db.ensure_device(device_id, db_path)
         pricing_defaults = config.get("pricing", {}).get("provider_defaults")
@@ -250,11 +256,11 @@ def create_app(config: dict | None = None) -> Flask:
         if auth_err:
             return auth_err
 
-        # Free tier: alerts are a Pro feature
-        tier = _get_device_tier(device_id)
-        if tier == "free":
-            return jsonify({"alerts": [], "count": 0, "tier_limited": True,
-                           "upgrade_url": "https://clawtrace.vybng.co/#pricing"})
+        # Early access: all users get alerts. Re-enable when payment is live.
+        # tier = _get_device_tier(device_id)
+        # if tier == "free":
+        #     return jsonify({"alerts": [], "count": 0, "tier_limited": True,
+        #                    "upgrade_url": "https://clawtrace.vybng.co/#pricing"})
 
         ack_param = request.args.get("acknowledged")
         acknowledged = None
@@ -403,10 +409,41 @@ def create_app(config: dict | None = None) -> Flask:
             m["effective_pricing"] = effective
         return jsonify({"models": models})
 
+    # --- Install script serving ---
+    _engine_dir = os.path.dirname(os.path.abspath(__file__))
+    _project_root = os.path.dirname(_engine_dir)
+
+    @app.route("/install")
+    def serve_install_script():
+        script_path = os.path.join(_project_root, "install", "install.sh")
+        if not os.path.exists(script_path):
+            return "Install script not found", 404
+        resp = make_response(send_file(script_path))
+        resp.headers["Content-Type"] = "text/plain; charset=utf-8"
+        return resp
+
+    @app.route("/install/sender.py")
+    def serve_sender_script():
+        script_path = os.path.join(_project_root, "skill", "sender.py")
+        if not os.path.exists(script_path):
+            return "Sender script not found", 404
+        resp = make_response(send_file(script_path))
+        resp.headers["Content-Type"] = "text/plain; charset=utf-8"
+        return resp
+
+    @app.route("/uninstall")
+    def serve_uninstall_script():
+        script_path = os.path.join(_project_root, "install", "uninstall.sh")
+        if not os.path.exists(script_path):
+            return "Uninstall script not found", 404
+        resp = make_response(send_file(script_path))
+        resp.headers["Content-Type"] = "text/plain; charset=utf-8"
+        return resp
+
     # --- Local API (existing, for backward compat) ---
     @app.route("/local/dashboard")
     def local_dashboard():
-        html_path = os.path.join(os.path.dirname(__file__), "local_dashboard.html")
+        html_path = os.path.join(os.path.dirname(__file__), "dashboard.html")
         if os.path.exists(html_path):
             return send_file(html_path)
         return "<h1>Local Dashboard</h1>", 200
